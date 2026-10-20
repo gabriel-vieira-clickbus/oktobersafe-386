@@ -1,0 +1,32 @@
+name: Assume AWS Role
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# id-token: write é obrigatório para o GitHub emitir o token OIDC usado no AssumeRoleWithWebIdentity
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  assume-role:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validar variáveis
+        run: |
+          if [ -z "${{ vars.AWS_ROLE_ARN }}" ]; then
+            echo "::error::Variável AWS_ROLE_ARN não definida (Settings > Secrets and variables > Actions > Variables)"
+            exit 1
+          fi
+
+      - name: Configurar credenciais AWS
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+          role-session-name: gha-${{ github.run_id }}
+
+      - name: Verificar identidade
+        run: aws sts get-caller-identity
